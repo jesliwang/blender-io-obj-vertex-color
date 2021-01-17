@@ -564,6 +564,7 @@ def create_mesh(new_objects,
                 verts_loc,
                 verts_nor,
                 verts_tex,
+                verts_col,
                 faces,
                 unique_materials,
                 unique_smooth_groups,
@@ -743,6 +744,15 @@ def create_mesh(new_objects,
         me.edges.add(len(edges))
         # edges should be a list of (a, b) tuples
         me.edges.foreach_set("vertices", unpack_list(edges))
+    
+    if verts_col and me.polygons:
+        vcol_lay = me.vertex_colors.new()
+
+        for i, col in enumerate(vcol_lay.data):
+            col.color[0] = verts_col[loops_vert_idx[i]][0]
+            col.color[1] = verts_col[loops_vert_idx[i]][1]
+            col.color[2] = verts_col[loops_vert_idx[i]][2]
+            col.color[3] = 1.0
 
     me.validate(clean_customdata=False)  # *Very* important to not remove lnors here!
     me.update(calc_edges=use_edges, calc_edges_loose=use_edges)
@@ -968,6 +978,7 @@ def load(context,
         verts_loc = []
         verts_nor = []
         verts_tex = []
+        verts_col = []
         faces = []  # tuples of the faces
         material_libs = set()  # filenames to material libs this OBJ uses
         vertex_groups = {}  # when use_groups_as_vgroups is true
@@ -1052,6 +1063,8 @@ def load(context,
                     if do_quick_vert:
                         try:
                             vdata.append(list(map(float_func, line_split[1:vdata_len + 1])))
+                            if len(line_split) == 7:
+                                verts_col.append(list(map(float_func, line_split[vdata_len + 1:vdata_len+4])))
                         except:
                             do_quick_vert = False
                             # In case we get too many failures on quick parsing, force fallback to full multi-line one.
@@ -1261,8 +1274,36 @@ def load(context,
         # Split the mesh by objects/materials, may
         SPLIT_OB_OR_GROUP = bool(use_split_objects or use_split_groups)
 
-        for data in split_mesh(verts_loc, faces, unique_materials, filepath, SPLIT_OB_OR_GROUP):
-            verts_loc_split, faces_split, unique_materials_split, dataname, use_vnor, use_vtex = data
+        # for data in split_mesh(verts_loc, faces, unique_materials, filepath, SPLIT_OB_OR_GROUP):
+        #     verts_loc_split, faces_split, unique_materials_split, dataname, use_vnor, use_vtex = data
+
+        # Note by Tomoaki Osada:
+        # The original program inputs verts_loc into split_mesh() and sometimes the order of verts_loc
+        # changes.
+        # Since vertex color references vertex indices of verts_loc, the order of verts_col has to
+        # be modified in the same way as verts_loc is.
+        # So far, I merge verts_loc and verts_col into a single list (verts) and do split_mesh(), and then
+        # split it into verts_loc and verts_col again.
+        # But probably it's more preferrable to modify split_mesh() itself.
+        verts = []
+        if verts_col:
+            for val in zip(verts_loc, verts_col):
+                verts.append(val)
+        else:
+            verts = verts_loc
+        
+        for data in split_mesh(verts, faces, unique_materials, filepath, SPLIT_OB_OR_GROUP):
+            verts_split, faces_split, unique_materials_split, dataname, use_vnor, use_vtex = data
+            
+            verts_loc_split = []
+            verts_col_split = []
+            for val in verts_split:
+                if type(val) is tuple:
+                    verts_loc_split.append(val[0])
+                    verts_col_split.append(val[1])
+                else:
+                    verts_loc_split.append(val)
+
             # Create meshes from the data, warning 'vertex_groups' wont support splitting
             #~ print(dataname, use_vnor, use_vtex)
             create_mesh(new_objects,
@@ -1270,6 +1311,7 @@ def load(context,
                         verts_loc_split,
                         verts_nor if use_vnor else [],
                         verts_tex if use_vtex else [],
+                        verts_col_split,
                         faces_split,
                         unique_materials_split,
                         unique_smooth_groups,

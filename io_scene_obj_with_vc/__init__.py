@@ -19,15 +19,15 @@
 # <pep8-80 compliant>
 
 bl_info = {
-    "name": "Wavefront OBJ format",
-    "author": "Campbell Barton, Bastien Montagne",
-    "version": (3, 8, 1),
+    "name": "Wavefront OBJ format with Vertex Color Support",
+    "author": "Tomoaki Osada, Campbell Barton, Bastien Montagne",
+    "version": (0, 0, 1),
     "blender": (2, 81, 6),
     "location": "File > Import-Export",
-    "description": "Import-Export OBJ, Import OBJ mesh, UV's, materials and textures",
+    "description": "Import-Export OBJ with Vertex Color, Import OBJ mesh, UV's, materials and textures",
     "warning": "",
-    "doc_url": "{BLENDER_MANUAL_URL}/addons/import_export/scene_obj.html",
-    "support": 'OFFICIAL',
+    "doc_url": "https://github.com/ynyBonfennil/blender-io-obj-vertex-color",
+    "support": 'COMMUNITY',
     "category": "Import-Export",
 }
 
@@ -59,7 +59,7 @@ from bpy_extras.io_utils import (
 class ImportOBJ(bpy.types.Operator, ImportHelper):
     """Load a Wavefront OBJ File"""
     bl_idname = "import_scene.obj"
-    bl_label = "Import OBJ"
+    bl_label = "Import OBJ with VC"
     bl_options = {'PRESET', 'UNDO'}
 
     filename_ext = ".obj"
@@ -239,7 +239,7 @@ class ExportOBJ(bpy.types.Operator, ExportHelper):
     """Save a Wavefront OBJ File"""
 
     bl_idname = "export_scene.obj"
-    bl_label = 'Export OBJ'
+    bl_label = 'Export OBJ with VC'
     bl_options = {'PRESET'}
 
     filename_ext = ".obj"
@@ -295,6 +295,11 @@ class ExportOBJ(bpy.types.Operator, ExportHelper):
             description="Export one normal per vertex and per face, to represent flat faces and sharp edges",
             default=True,
             )
+    use_colors: BoolProperty(
+            name="Write Vertex Colors",
+            description="Write out the active vertex color layer",
+            default=True,
+    )
     use_uvs: BoolProperty(
             name="Include UVs",
             description="Write out the active UV coordinates",
@@ -466,6 +471,7 @@ class OBJ_PT_export_geometry(bpy.types.Panel):
         layout.prop(operator, 'use_smooth_groups')
         layout.prop(operator, 'use_smooth_groups_bitflags')
         layout.prop(operator, 'use_normals')
+        layout.prop(operator, 'use_colors')
         layout.prop(operator, 'use_uvs')
         layout.prop(operator, 'use_materials')
         layout.prop(operator, 'use_triangles')
@@ -475,11 +481,11 @@ class OBJ_PT_export_geometry(bpy.types.Panel):
 
 
 def menu_func_import(self, context):
-    self.layout.operator(ImportOBJ.bl_idname, text="Wavefront (.obj)")
+    self.layout.operator(ImportOBJ.bl_idname, text="Wavefront with VC (.obj)")
 
 
 def menu_func_export(self, context):
-    self.layout.operator(ExportOBJ.bl_idname, text="Wavefront (.obj)")
+    self.layout.operator(ExportOBJ.bl_idname, text="Wavefront with VC (.obj)")
 
 
 classes = (

@@ -240,6 +240,7 @@ def write_file(filepath, objects, depsgraph, scene,
                EXPORT_SMOOTH_GROUPS=False,
                EXPORT_SMOOTH_GROUPS_BITFLAGS=False,
                EXPORT_NORMALS=False,
+               EXPORT_COLORS=True,
                EXPORT_UV=True,
                EXPORT_MTL=True,
                EXPORT_APPLY_MODIFIERS=True,
@@ -294,8 +295,8 @@ def write_file(filepath, objects, depsgraph, scene,
             fw = f.write
 
             # Write Header
-            fw('# Blender v%s OBJ File: %r\n' % (bpy.app.version_string, os.path.basename(bpy.data.filepath)))
-            fw('# www.blender.org\n')
+            fw('# Blender v%s OBJ File with Vertex Color Support: %r\n' % (bpy.app.version_string, os.path.basename(bpy.data.filepath)))
+            fw('# https://github.com/ynyBonfennil/blender-io-obj-vertex-color\n')
 
             # Tell the obj file what material file to use.
             if EXPORT_MTL:
@@ -374,6 +375,17 @@ def write_file(filepath, objects, depsgraph, scene,
 
                         me_verts = me.vertices[:]
 
+                        # Get vertex color if it exists
+                        # Since me.vertex_colors is not an indexed data, we need to index it
+                        if EXPORT_COLORS and me.vertex_colors:
+                            me_colors = [0 for _ in me_verts]
+
+                            v_count = 0
+                            for pl in me.polygons:
+                                for vi in pl.vertices:
+                                    me_colors[vi] = me.vertex_colors["Col"].data[v_count]   # ToDo: only "Col" is supported
+                                    v_count += 1
+
                         # Make our own list so it can be sorted to reduce context switching
                         face_index_pairs = [(face, index) for index, face in enumerate(me.polygons)]
 
@@ -451,8 +463,13 @@ def write_file(filepath, objects, depsgraph, scene,
                         subprogress2.step()
 
                         # Vert
-                        for v in me_verts:
-                            fw('v %.6f %.6f %.6f\n' % v.co[:])
+                        if EXPORT_COLORS:
+                            for i, v in enumerate(zip(me_verts, me_colors)):
+                                values = v[0].co[:] + v[1].color[:3]
+                                fw('v %.6f %.6f %.6f %.6f %.6f %.6f\n' % values)
+                        else:
+                            for v in me_verts:
+                                fw('v %.6f %.6f %.6f\n' % v.co[:])
 
                         subprogress2.step()
 
@@ -658,6 +675,7 @@ def _write(context, filepath,
            EXPORT_SMOOTH_GROUPS,
            EXPORT_SMOOTH_GROUPS_BITFLAGS,
            EXPORT_NORMALS,  # ok
+           EXPORT_COLORS,
            EXPORT_UV,  # ok
            EXPORT_MTL,
            EXPORT_APPLY_MODIFIERS,  # ok
@@ -716,6 +734,7 @@ def _write(context, filepath,
                        EXPORT_SMOOTH_GROUPS,
                        EXPORT_SMOOTH_GROUPS_BITFLAGS,
                        EXPORT_NORMALS,
+                       EXPORT_COLORS,
                        EXPORT_UV,
                        EXPORT_MTL,
                        EXPORT_APPLY_MODIFIERS,
@@ -749,6 +768,7 @@ def save(context,
          use_triangles=False,
          use_edges=True,
          use_normals=False,
+         use_colors=True,
          use_smooth_groups=False,
          use_smooth_groups_bitflags=False,
          use_uvs=True,
@@ -773,6 +793,7 @@ def save(context,
            EXPORT_SMOOTH_GROUPS=use_smooth_groups,
            EXPORT_SMOOTH_GROUPS_BITFLAGS=use_smooth_groups_bitflags,
            EXPORT_NORMALS=use_normals,
+           EXPORT_COLORS=use_colors,
            EXPORT_UV=use_uvs,
            EXPORT_MTL=use_materials,
            EXPORT_APPLY_MODIFIERS=use_mesh_modifiers,
