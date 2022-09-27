@@ -744,7 +744,7 @@ def create_mesh(new_objects,
         me.edges.add(len(edges))
         # edges should be a list of (a, b) tuples
         me.edges.foreach_set("vertices", unpack_list(edges))
-    
+
     if verts_col and me.polygons:
         vcol_lay = me.vertex_colors.new()
 
@@ -752,7 +752,11 @@ def create_mesh(new_objects,
             col.color[0] = verts_col[loops_vert_idx[i]][0]
             col.color[1] = verts_col[loops_vert_idx[i]][1]
             col.color[2] = verts_col[loops_vert_idx[i]][2]
-            col.color[3] = 1.0
+            if len(verts_col[loops_vert_idx[i]]) >= 4:
+                col.color[3] = verts_col[loops_vert_idx[i]][3]
+            else:
+                col.color[3] = 1.0
+
 
     me.validate(clean_customdata=False)  # *Very* important to not remove lnors here!
     me.update(calc_edges=use_edges, calc_edges_loose=use_edges)
@@ -1065,6 +1069,8 @@ def load(context,
                             vdata.append(list(map(float_func, line_split[1:vdata_len + 1])))
                             if len(line_split) == 7:
                                 verts_col.append(list(map(float_func, line_split[vdata_len + 1:vdata_len+4])))
+                            elif len(line_split) > 7:
+                                verts_col.append(list(map(float_func, line_split[vdata_len + 1:vdata_len+5])))
                         except:
                             do_quick_vert = False
                             # In case we get too many failures on quick parsing, force fallback to full multi-line one.
@@ -1291,10 +1297,10 @@ def load(context,
                 verts.append(val)
         else:
             verts = verts_loc
-        
+
         for data in split_mesh(verts, faces, unique_materials, filepath, SPLIT_OB_OR_GROUP):
             verts_split, faces_split, unique_materials_split, dataname, use_vnor, use_vtex = data
-            
+
             verts_loc_split = []
             verts_col_split = []
             for val in verts_split:
